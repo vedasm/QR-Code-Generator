@@ -9,13 +9,13 @@ st.set_page_config(page_title="QR Code Generator", page_icon="🔳", layout="cen
 
 # ---------- Session state setup ----------
 if "history" not in st.session_state:
-    st.session_state.history = []  # list of dicts: text, fg, bg, box_size, timestamp, png_bytes
+    st.session_state.history = [] 
 
 
 def generate_qr(data: str, fg_color: str, bg_color: str, box_size: int, border: int) -> bytes:
     """Generate a QR code PNG and return it as raw bytes."""
     qr = qrcode.QRCode(
-        version=None,  # auto-size to fit the data
+        version=None,
         error_correction=qrcode.constants.ERROR_CORRECT_M, # type: ignore
         box_size=box_size,
         border=border,
