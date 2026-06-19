@@ -1,15 +1,9 @@
 import io
 from datetime import datetime
-
 import qrcode
 import streamlit as st
-from PIL import Image
 
-st.set_page_config(page_title="QR Code Generator", page_icon="🔳", layout="centered")
-
-# ---------- Session state setup ----------
-if "history" not in st.session_state:
-    st.session_state.history = [] 
+st.set_page_config(page_title="QR Code Generator", page_icon="🔗", layout="centered")
 
 
 def generate_qr(data: str, fg_color: str, bg_color: str, box_size: int, border: int) -> bytes:
@@ -29,14 +23,11 @@ def generate_qr(data: str, fg_color: str, bg_color: str, box_size: int, border: 
     img.save(buf, format="PNG")
     return buf.getvalue()
 
-
-# ---------- UI ----------
-st.title("🔳 QR Code Generator")
-st.caption("Generate QR codes with custom colors, preview them, download as PNG, and revisit your history.")
+st.title("QR Code Generator")
+st.caption("Generate QR codes with custom colors, preview them & download as PNG.")
 
 with st.form("qr_form"):
     data = st.text_input("Text or URL to encode", placeholder="https://example.com")
-
     col1, col2 = st.columns(2)
     with col1:
         fg_color = st.color_picker("Foreground color", "#000000")
@@ -76,7 +67,6 @@ if submitted:
             },
         )
 
-# ---------- Show latest result ----------
 if "last_result" in st.session_state:
     st.subheader("Preview")
     result = st.session_state.last_result
@@ -88,32 +78,3 @@ if "last_result" in st.session_state:
         mime="image/png",
         use_container_width=True,
     )
-
-# ---------- History ----------
-st.divider()
-st.subheader("History")
-
-if not st.session_state.history:
-    st.info("No QR codes generated yet. Your generated codes will appear here.")
-else:
-    col_a, col_b = st.columns([3, 1])
-    with col_b:
-        if st.button("Clear history", use_container_width=True):
-            st.session_state.history = []
-            st.rerun()
-
-    for i, item in enumerate(st.session_state.history):
-        with st.container(border=True):
-            c1, c2 = st.columns([1, 3])
-            with c1:
-                st.image(item["png_bytes"], width=100)
-            with c2:
-                st.write(f"**{item['text']}**")
-                st.caption(f"FG: {item['fg']} · BG: {item['bg']} · {item['timestamp']}")
-                st.download_button(
-                    label="Download",
-                    data=item["png_bytes"],
-                    file_name=f"qr_code_{data.strip()}.png",
-                    mime="image/png",
-                    key=f"download_{i}",
-                )
