@@ -1,6 +1,7 @@
 import io
 import qrcode
 import streamlit as st
+from PIL import Image
 
 st.set_page_config(page_title="QR Code Generator", page_icon="🔗", layout="centered")
 
@@ -17,6 +18,11 @@ with st.form("qr_form"):
     with col2:
         back_color = st.color_picker("Background", "#FFFFFF")
 
+    logo = st.file_uploader(
+        "Upload Logo (Optional)",
+        type=["png", "jpg", "jpeg"]
+    )
+
     generate = st.form_submit_button(
         "Generate QR Code",
         use_container_width=True
@@ -32,8 +38,8 @@ if generate:
     else:
         qr = qrcode.QRCode(
             version=None,
-            error_correction=qrcode.constants.ERROR_CORRECT_M, # type: ignore
-            border=2
+            error_correction=qrcode.constants.ERROR_CORRECT_H, # type: ignore
+            border=3,
         )
 
         qr.add_data(text)
@@ -43,6 +49,24 @@ if generate:
             fill_color=front_color,
             back_color=back_color
         ).convert("RGB") # type: ignore
+
+        # Add logo if uploaded
+        if logo is not None:
+
+            logo_img = Image.open(logo).convert("RGBA")
+
+            qr_width, qr_height = image.size
+
+            # Logo size = 20% of QR code
+            logo_size = qr_width // 5
+
+            logo_img.thumbnail((logo_size, logo_size))
+
+            # Center position
+            x = (qr_width - logo_img.width) // 2
+            y = (qr_height - logo_img.height) // 2
+
+            image.paste(logo_img, (x, y), logo_img)
 
         buffer = io.BytesIO()
         image.save(buffer, format="PNG")
@@ -57,5 +81,5 @@ if generate:
             data=qr_image,
             file_name="qrcode.png",
             mime="image/png",
-            use_container_width=True
+            use_container_width=True,
         )
