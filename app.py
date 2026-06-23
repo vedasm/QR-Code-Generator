@@ -18,6 +18,12 @@ with st.form("qr_form"):
     with col2:
         back_color = st.color_picker("Background", "#FFFFFF")
 
+    qr_size = st.selectbox(
+        "QR Code Size",
+        ["Small", "Medium", "Large", "HD"],
+        index=1
+    )
+
     logo = st.file_uploader(
         "Upload Logo (Optional)",
         type=["png", "jpg", "jpeg"]
@@ -36,10 +42,19 @@ if generate:
         st.warning("QR color and background color cannot be the same.")
 
     else:
+        size_map = {
+            "Small": 5,
+            "Medium": 8,
+            "Large": 12,
+            "HD": 18
+        }
+
+
         qr = qrcode.QRCode(
             version=None,
             error_correction=qrcode.constants.ERROR_CORRECT_H, # type: ignore
-            border=3,
+            box_size=size_map[qr_size],
+            border=2,
         )
 
         qr.add_data(text)
@@ -50,19 +65,14 @@ if generate:
             back_color=back_color
         ).convert("RGB") # type: ignore
 
-        # Add logo if uploaded
         if logo is not None:
 
             logo_img = Image.open(logo).convert("RGBA")
 
             qr_width, qr_height = image.size
-
-            # Logo size = 20% of QR code
             logo_size = qr_width // 5
 
             logo_img.thumbnail((logo_size, logo_size))
-
-            # Center position
             x = (qr_width - logo_img.width) // 2
             y = (qr_height - logo_img.height) // 2
 
