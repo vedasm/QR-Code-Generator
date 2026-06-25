@@ -5,122 +5,119 @@ from PIL import Image
 import cv2
 import numpy as np
 
-st.set_page_config(page_title="QR Code Generator", page_icon="🔗", layout="centered")
+st.set_page_config(page_title="QR Code Generator/Decoder", page_icon="🔗", layout="centered")
 
 st.title("QR Code Generator")
-st.write("Enter any text or link below to create a QR code.")
 
-with st.form("qr_form"):
-    text = st.text_input("Enter Text or URL", placeholder="https://example.com")
-    col1, col2 = st.columns(2)
+tab1, tab2 = st.tabs(["⚙️ Generator", "🔍 Decoder"])
 
-    with col1:
-        front_color = st.color_picker("QR Color","#000000")
+with tab1:
+    st.write("Enter any text or link below to create a QR code.")
 
-    with col2:
-        back_color = st.color_picker("Background", "#FFFFFF")
-
-    qr_size = st.selectbox(
-        "QR Code Size",
-        ["Small", "Medium", "Large", "HD"],
-        index=1
-    )
-
-    logo = st.file_uploader(
-        "Upload Logo (Optional)",
-        type=["png", "jpg", "jpeg"]
-    )
-
-    generate = st.form_submit_button(
-        "Generate QR Code",
-        use_container_width=True
-    )
-
-if generate:
-    if text.strip() == "":
-        st.warning("Please enter some text or URL.")
-
-    elif front_color == back_color:
-        st.warning("QR color and background color cannot be the same.")
-
-    else:
-        size_map = {
-            "Small": 5,
-            "Medium": 8,
-            "Large": 12,
-            "HD": 18
-        }
-
-
-        qr = qrcode.QRCode(
-            version=None,
-            error_correction=qrcode.constants.ERROR_CORRECT_H, # type: ignore
-            box_size=size_map[qr_size],
-            border=2,
+    with st.form("qr_form"):
+        text = st.text_input("Enter Text or URL", placeholder="https://example.com")
+        col1, col2 = st.columns(2)
+        with col1:
+            front_color = st.color_picker("QR Color","#000000")
+        with col2:
+            back_color = st.color_picker("Background", "#FFFFFF")
+        qr_size = st.selectbox(
+            "QR Code Size",
+            ["Small", "Medium", "Large", "HD"],
+            index=1
         )
 
-        qr.add_data(text)
-        qr.make(fit=True)
-
-        image = qr.make_image(
-            fill_color=front_color,
-            back_color=back_color
-        ).convert("RGB") # type: ignore
-
-        if logo is not None:
-
-            logo_img = Image.open(logo).convert("RGBA")
-
-            qr_width, qr_height = image.size
-            logo_size = qr_width // 5
-
-            logo_img.thumbnail((logo_size, logo_size))
-            x = (qr_width - logo_img.width) // 2
-            y = (qr_height - logo_img.height) // 2
-
-            image.paste(logo_img, (x, y), logo_img)
-
-        buffer = io.BytesIO()
-        image.save(buffer, format="PNG")
-
-        qr_image = buffer.getvalue()
-
-        st.subheader("Generated QR Code")
-        st.image(qr_image, width=300)
-
-        st.download_button(
-            "Download PNG",
-            data=qr_image,
-            file_name="qrcode.png",
-            mime="image/png",
-            use_container_width=True,
+        logo = st.file_uploader(
+            "Upload Logo (Optional)",
+            type=["png", "jpg", "jpeg"]
         )
 
-st.divider()
-st.subheader("QR Code Decoder")
-st.write("Upload a QR code image to decode its content.")
+        generate = st.form_submit_button(
+            "Generate QR Code",
+            use_container_width=True
+        )
 
-decoded_file = st.file_uploader(
-    "Upload QR Code Image",
-    type=["png", "jpg", "jpeg"],
-    key="decoder_upload"
-)
+    if generate:
+        if text.strip() == "":
+            st.warning("Please enter some text or URL.")
+        elif front_color == back_color:
+            st.warning("QR color and background color cannot be the same.")
+        else:
+            size_map = {
+                "Small": 5,
+                "Medium": 8,
+                "Large": 12,
+                "HD": 18
+            }
 
-if decoded_file is not None:
-    decode_img = Image.open(decoded_file).convert("RGB")
-    st.image(decode_img, width=250, caption="Uploaded QR Code")
+            qr = qrcode.QRCode(
+                version=None,
+                error_correction=qrcode.constants.ERROR_CORRECT_H, # type: ignore
+                box_size=size_map[qr_size],
+                border=2,
+            )
 
-    img_array = np.array(decode_img)
-    img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+            qr.add_data(text)
+            qr.make(fit=True)
 
-    detector = cv2.QRCodeDetector()
-    decoded_text, _, _ = detector.detectAndDecode(img_bgr)
+            image = qr.make_image(
+                fill_color=front_color,
+                back_color=back_color
+            ).convert("RGB") # type: ignore
 
-    if decoded_text:
-        st.success("QR Code decoded successfully!")
-        st.text_area("Decoded Content", value=decoded_text, height=100)
+            if logo is not None:
 
-        if decoded_text.startswith("http://") or decoded_text.startswith("https://"):
-            st.link_button("Open Link", url=decoded_text, use_container_width=True)
-    else:
-        st.error("Could not decode the QR code. Make sure the image is clear and contains a valid QR code.")
+                logo_img = Image.open(logo).convert("RGBA")
+
+                qr_width, qr_height = image.size
+                logo_size = qr_width // 5
+
+                logo_img.thumbnail((logo_size, logo_size))
+                x = (qr_width - logo_img.width) // 2
+                y = (qr_height - logo_img.height) // 2
+
+                image.paste(logo_img, (x, y), logo_img)
+
+            buffer = io.BytesIO()
+            image.save(buffer, format="PNG")
+
+            qr_image = buffer.getvalue()
+
+            st.subheader("Generated QR Code")
+            st.image(qr_image, width=300)
+
+            st.download_button(
+                "Download PNG",
+                data=qr_image,
+                file_name="qrcode.png",
+                mime="image/png",
+                use_container_width=True,
+            )
+
+with tab2:
+    st.write("Upload a QR code image to decode its content.")
+
+    decoded_file = st.file_uploader(
+        "Upload QR Code Image",
+        type=["png", "jpg", "jpeg"],
+        key="decoder_upload"
+    )
+
+    if decoded_file is not None:
+        decode_img = Image.open(decoded_file).convert("RGB")
+        st.image(decode_img, width=250, caption="Uploaded QR Code")
+
+        img_array = np.array(decode_img)
+        img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+
+        detector = cv2.QRCodeDetector()
+        decoded_text, _, _ = detector.detectAndDecode(img_bgr)
+
+        if decoded_text:
+            st.success("✅ QR Code decoded successfully!")
+            st.text_area("Decoded Content", value=decoded_text, height=100)
+
+            if decoded_text.startswith("http://") or decoded_text.startswith("https://"):
+                st.link_button("Open Link", url=decoded_text, use_container_width=True)
+        else:
+            st.error("❌ Could not decode the QR code. Make sure the image is clear and contains a valid QR code.")
