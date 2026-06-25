@@ -7,7 +7,7 @@ import numpy as np
 
 st.set_page_config(page_title="QR Code Generator/Decoder", page_icon="🔗", layout="centered")
 
-st.title("QR Code Generator")
+st.title("QR Code Generator/Decoder")
 
 tab1, tab2 = st.tabs(["⚙️ Generator", "🔍 Decoder"])
 
