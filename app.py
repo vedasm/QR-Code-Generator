@@ -2,6 +2,8 @@ import io
 import qrcode
 import streamlit as st
 from PIL import Image
+import cv2
+import numpy as np
 
 st.set_page_config(page_title="QR Code Generator", page_icon="🔗", layout="centered")
 
@@ -93,3 +95,32 @@ if generate:
             mime="image/png",
             use_container_width=True,
         )
+
+st.divider()
+st.subheader("QR Code Decoder")
+st.write("Upload a QR code image to decode its content.")
+
+decoded_file = st.file_uploader(
+    "Upload QR Code Image",
+    type=["png", "jpg", "jpeg"],
+    key="decoder_upload"
+)
+
+if decoded_file is not None:
+    decode_img = Image.open(decoded_file).convert("RGB")
+    st.image(decode_img, width=250, caption="Uploaded QR Code")
+
+    img_array = np.array(decode_img)
+    img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+
+    detector = cv2.QRCodeDetector()
+    decoded_text, _, _ = detector.detectAndDecode(img_bgr)
+
+    if decoded_text:
+        st.success("QR Code decoded successfully!")
+        st.text_area("Decoded Content", value=decoded_text, height=100)
+
+        if decoded_text.startswith("http://") or decoded_text.startswith("https://"):
+            st.link_button("Open Link", url=decoded_text, use_container_width=True)
+    else:
+        st.error("Could not decode the QR code. Make sure the image is clear and contains a valid QR code.")
