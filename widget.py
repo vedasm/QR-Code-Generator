@@ -117,10 +117,3 @@ def render_decoded_result(decoded_text):
         return
 
     st.subheader("📄 Text")
-
-    st.text_area(
-        "Content",
-        decoded_text,
-        height=150,
-        disabled=True,
-    )
