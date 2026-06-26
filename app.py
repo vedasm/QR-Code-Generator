@@ -4,6 +4,7 @@ import streamlit as st
 from PIL import Image
 import cv2
 import numpy as np
+from widget import render_decoded_result
 
 st.set_page_config(page_title="QR Code Generator/Decoder", page_icon="🔗", layout="centered")
 
@@ -114,8 +115,7 @@ with tab2:
         decoded_text, _, _ = detector.detectAndDecode(img_bgr)
 
         if decoded_text:
-            st.success("✅ QR Code decoded successfully!")
-            st.text_area("Decoded Content", value=decoded_text, height=100)
+            render_decoded_result(decoded_text)
 
             if decoded_text.startswith("http://") or decoded_text.startswith("https://"):
                 st.link_button("Open Link", url=decoded_text, use_container_width=True)
