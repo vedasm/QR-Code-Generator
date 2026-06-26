@@ -2,6 +2,9 @@ import io
 import qrcode
 import streamlit as st
 from PIL import Image
+from qrcode.image.styledpil import StyledPilImage
+from qrcode.image.styles.colormasks import SolidFillColorMask
+from qrcode.image.styles.moduledrawers.pil import CircleModuleDrawer, RoundedModuleDrawer
 import cv2
 import numpy as np
 
@@ -10,6 +13,11 @@ st.set_page_config(page_title="QR Code Generator/Decoder", page_icon="🔗", lay
 st.title("QR Code Generator/Decoder")
 
 tab1, tab2 = st.tabs(["⚙️ Generator", "🔍 Decoder"])
+
+
+def hex_to_rgb(hex_color):
+    hex_color = hex_color.lstrip("#")
+    return tuple(int(hex_color[index:index + 2], 16) for index in (0, 2, 4))
 
 with tab1:
     st.write("Enter any text or link below to create a QR code.")
@@ -25,6 +33,11 @@ with tab1:
             "QR Code Size",
             ["Small", "Medium", "Large", "HD"],
             index=1
+        )
+        module_style = st.selectbox(
+            "Module Style",
+            ["Classic Squares", "Rounded", "Circles"],
+            index=0
         )
 
         logo = st.file_uploader(
@@ -60,10 +73,25 @@ with tab1:
             qr.add_data(text)
             qr.make(fit=True)
 
-            image = qr.make_image(
-                fill_color=front_color,
-                back_color=back_color
-            ).convert("RGB") # type: ignore
+            if module_style == "Classic Squares":
+                image = qr.make_image(
+                    fill_color=front_color,
+                    back_color=back_color
+                ).convert("RGB") # type: ignore
+            else:
+                module_drawers = {
+                    "Rounded": RoundedModuleDrawer(),
+                    "Circles": CircleModuleDrawer(),
+                }
+
+                image = qr.make_image(
+                    image_factory=StyledPilImage,
+                    module_drawer=module_drawers[module_style],
+                    color_mask=SolidFillColorMask(
+                        front_color=hex_to_rgb(front_color), # type: ignore
+                        back_color=hex_to_rgb(back_color), # type: ignore
+                    ),
+                ).convert("RGB") # type: ignore
 
             if logo is not None:
 

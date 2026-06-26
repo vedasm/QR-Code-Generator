@@ -6,6 +6,7 @@ A simple Streamlit app to generate custom QR codes, preview them, download as PN
 
 - Generate a QR code from any text or URL
 - Customize foreground and background colors
+- Choose classic square, rounded, or circular QR modules for a more polished look
 - Adjustable box size and border
 - Download the generated QR code as a PNG
 - Session history of all codes generated, each individually downloadable
@@ -41,13 +42,13 @@ flowchart TB
 ### Components
 
 **User interface (Streamlit)**
-- Input form: collects the text/URL to encode, foreground/background colors, box size, and border size.
+- Input form: collects the text/URL to encode, foreground/background colors, box size, border size, and module style.
 - Preview / download: displays the most recently generated QR code and offers a PNG download button.
 - History panel: lists every QR code generated this session, each with its own download button.
 
 **QR generation logic**
 - `qrcode`: builds the QR matrix from the input text, auto-sizing to fit the data.
-- `Pillow`: renders that matrix into a PNG image using the chosen colors, then encodes it to bytes.
+- `Pillow`: renders that matrix into a PNG image using the chosen colors and module style, then encodes it to bytes.
 
 **Session state**
 - `last_result`: holds the most recently generated PNG bytes plus its metadata, shown in the preview section.
