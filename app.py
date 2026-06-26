@@ -112,12 +112,13 @@ with tab2:
         img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
 
         detector = cv2.QRCodeDetector()
-        decoded_text, _, _ = detector.detectAndDecode(img_bgr)
 
-        if decoded_text:
-            render_decoded_result(decoded_text)
+        decoded_text, points, _ = detector.detectAndDecode(img_bgr)
 
-            if decoded_text.startswith("http://") or decoded_text.startswith("https://"):
-                st.link_button("Open Link", url=decoded_text, use_container_width=True)
+        if points is None or decoded_text.strip() == "":
+            st.error(
+                "❌ Unable to decode this QR code.\n\n"
+                "Try uploading a clearer image or a higher-resolution QR code."
+            )
         else:
-            st.error("❌ Could not decode the QR code. Make sure the image is clear and contains a valid QR code.")
+            render_decoded_result(decoded_text)
