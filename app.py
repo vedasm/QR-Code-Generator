@@ -4,7 +4,6 @@ import streamlit as st
 from PIL import Image
 import cv2
 import numpy as np
-from widget import render_decoded_result
 
 st.set_page_config(page_title="QR Code Generator/Decoder", page_icon="🔗", layout="centered")
 
@@ -112,13 +111,13 @@ with tab2:
         img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
 
         detector = cv2.QRCodeDetector()
+        decoded_text, _, _ = detector.detectAndDecode(img_bgr)
 
-        decoded_text, points, _ = detector.detectAndDecode(img_bgr)
+        if decoded_text:
+            st.success("✅ QR Code decoded successfully!")
+            st.text_area("Decoded Content", value=decoded_text, height=100)
 
-        if points is None or decoded_text.strip() == "":
-            st.error(
-                "❌ Unable to decode this QR code.\n\n"
-                "Try uploading a clearer image or a higher-resolution QR code."
-            )
+            if decoded_text.startswith("http://") or decoded_text.startswith("https://"):
+                st.link_button("Open Link", url=decoded_text, use_container_width=True)
         else:
-            render_decoded_result(decoded_text)
+            st.error("❌ Could not decode the QR code. Make sure the image is clear and contains a valid QR code.")
