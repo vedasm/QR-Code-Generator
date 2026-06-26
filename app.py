@@ -5,8 +5,6 @@ from PIL import Image
 import cv2
 import numpy as np
 from widget import render_decoded_result
-from pyzbar.pyzbar import decode
-
 
 st.set_page_config(page_title="QR Code Generator/Decoder", page_icon="🔗", layout="centered")
 
@@ -107,24 +105,19 @@ with tab2:
     )
 
     if decoded_file is not None:
-        image = Image.open(decoded_file).convert("RGB")
-        st.image(image, width=250)
+        decode_img = Image.open(decoded_file).convert("RGB")
+        st.image(decode_img, width=250, caption="Uploaded QR Code")
 
-        decoded_text = ""
+        img_array = np.array(decode_img)
+        img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
 
-        try:
-            results = decode(image)
-            if results:
-                decoded_text = results[0].data.decode("utf-8")
-        except Exception:
-            pass
+        detector = cv2.QRCodeDetector()
+        decoded_text, _, _ = detector.detectAndDecode(img_bgr)
 
-        if not decoded_text:
-            img_array = np.array(image)
-            img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
-            detector = cv2.QRCodeDetector()
-            decoded_text, _, _ = detector.detectAndDecode(img_bgr)
-        if decoded_text.strip():
+        if decoded_text:
             render_decoded_result(decoded_text)
+
+            if decoded_text.startswith("http://") or decoded_text.startswith("https://"):
+                st.link_button("Open Link", url=decoded_text, use_container_width=True)
         else:
-            st.error("❌ Unable to decode this QR code.")
+            st.error("❌ Could not decode the QR code. Make sure the image is clear and contains a valid QR code.")
