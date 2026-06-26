@@ -116,5 +116,8 @@ with tab2:
 
         if decoded_text:
             render_decoded_result(decoded_text)
+
+            if decoded_text.startswith("http://") or decoded_text.startswith("https://"):
+                st.link_button("Open Link", url=decoded_text, use_container_width=True)
         else:
             st.error("❌ Could not decode the QR code. Make sure the image is clear and contains a valid QR code.")
