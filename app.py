@@ -20,6 +20,9 @@ if "generated_history" not in st.session_state:
 if "decoded_history" not in st.session_state:
     st.session_state.decoded_history = []
 
+if "last_generated" not in st.session_state:
+    st.session_state.last_generated = None
+
 
 def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip("#")
@@ -71,7 +74,7 @@ with tab1:
 
             qr = qrcode.QRCode(
                 version=None,
-                error_correction=qrcode.constants.ERROR_CORRECT_H,
+                error_correction=qrcode.constants.ERROR_CORRECT_H, # type: ignore
                 box_size=size_map[qr_size],
                 border=2,
             )
@@ -83,7 +86,7 @@ with tab1:
                 image = qr.make_image(
                     fill_color=front_color,
                     back_color=back_color
-                ).convert("RGB")
+                ).convert("RGB") # type: ignore
             else:
                 module_drawers = {
                     "Rounded": RoundedModuleDrawer(),
@@ -94,8 +97,8 @@ with tab1:
                     image_factory=StyledPilImage,
                     module_drawer=module_drawers[module_style],
                     color_mask=SolidFillColorMask(
-                        front_color=hex_to_rgb(front_color),
-                        back_color=hex_to_rgb(back_color),
+                        front_color=hex_to_rgb(front_color), # type: ignore
+                        back_color=hex_to_rgb(back_color), # type: ignore
                     ),
                 ).convert("RGB")
 
@@ -122,16 +125,21 @@ with tab1:
                 "image_bytes": qr_image,
             })
 
-            st.subheader("Generated QR Code")
-            st.image(qr_image, width=300)
+            st.session_state.last_generated = {
+                "text": text.strip(),
+                "image_bytes": qr_image,
+            }
 
-            st.download_button(
-                "Download PNG",
-                data=qr_image,
-                file_name="qrcode.png",
-                mime="image/png",
-                use_container_width=True,
-            )
+    if st.session_state.last_generated:
+        st.subheader("Generated QR Code")
+        st.image(st.session_state.last_generated["image_bytes"], width=300)
+        st.download_button(
+            "Download PNG",
+            data=st.session_state.last_generated["image_bytes"],
+            file_name="qrcode.png",
+            mime="image/png",
+            use_container_width=True,
+        )
 
     if st.session_state.generated_history:
         st.divider()
@@ -172,8 +180,34 @@ with tab2:
         img_array = np.array(decode_img)
         img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
 
-        detector = cv2.QRCodeDetector()
-        decoded_text, _, _ = detector.detectAndDecode(img_bgr)
+        def try_decode(image):
+            detector = cv2.QRCodeDetector()
+            text, _, _ = detector.detectAndDecode(image)
+            return text
+
+        def preprocess_variants(bgr_image):
+            """Return preprocessed image variants to attempt decoding on."""
+            gray = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
+            variants = [bgr_image, gray]
+            adaptive = cv2.adaptiveThreshold(
+                gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                cv2.THRESH_BINARY, 51, 10
+            )
+            variants.append(adaptive)
+            variants.append(cv2.bitwise_not(adaptive))
+            _, otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            variants.append(otsu)
+            variants.append(cv2.bitwise_not(otsu))
+            h, w = gray.shape
+            upscaled = cv2.resize(gray, (w * 2, h * 2), interpolation=cv2.INTER_CUBIC)
+            variants.append(upscaled)
+            return variants
+
+        decoded_text = ""
+        for variant in preprocess_variants(img_bgr):
+            decoded_text = try_decode(variant)
+            if decoded_text:
+                break
 
         if decoded_text:
             st.success("✅ QR Code decoded successfully!")
@@ -188,7 +222,7 @@ with tab2:
                     "decoded_text": decoded_text,
                 })
         else:
-            st.error("❌ Could not decode the QR code. Make sure the image is clear and contains a valid QR code.")
+            st.error("Could not decode the QR code. Make sure the image is clear and contains a valid QR code.")
 
     if st.session_state.decoded_history:
         st.divider()
