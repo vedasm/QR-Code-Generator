@@ -14,6 +14,12 @@ st.title("QR Code Generator/Decoder")
 
 tab1, tab2 = st.tabs(["⚙️ Generator", "🔍 Decoder"])
 
+if "generated_history" not in st.session_state:
+    st.session_state.generated_history = []
+
+if "decoded_history" not in st.session_state:
+    st.session_state.decoded_history = []
+
 
 def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip("#")
@@ -65,7 +71,7 @@ with tab1:
 
             qr = qrcode.QRCode(
                 version=None,
-                error_correction=qrcode.constants.ERROR_CORRECT_H, # type: ignore
+                error_correction=qrcode.constants.ERROR_CORRECT_H,
                 box_size=size_map[qr_size],
                 border=2,
             )
@@ -77,7 +83,7 @@ with tab1:
                 image = qr.make_image(
                     fill_color=front_color,
                     back_color=back_color
-                ).convert("RGB") # type: ignore
+                ).convert("RGB")
             else:
                 module_drawers = {
                     "Rounded": RoundedModuleDrawer(),
@@ -88,10 +94,10 @@ with tab1:
                     image_factory=StyledPilImage,
                     module_drawer=module_drawers[module_style],
                     color_mask=SolidFillColorMask(
-                        front_color=hex_to_rgb(front_color), # type: ignore
-                        back_color=hex_to_rgb(back_color), # type: ignore
+                        front_color=hex_to_rgb(front_color),
+                        back_color=hex_to_rgb(back_color),
                     ),
-                ).convert("RGB") # type: ignore
+                ).convert("RGB")
 
             if logo is not None:
 
@@ -111,6 +117,11 @@ with tab1:
 
             qr_image = buffer.getvalue()
 
+            st.session_state.generated_history.append({
+                "text": text.strip(),
+                "image_bytes": qr_image,
+            })
+
             st.subheader("Generated QR Code")
             st.image(qr_image, width=300)
 
@@ -121,6 +132,29 @@ with tab1:
                 mime="image/png",
                 use_container_width=True,
             )
+
+    if st.session_state.generated_history:
+        st.divider()
+        st.subheader("🕒 Generation History")
+
+        col_clear, _ = st.columns([1, 3])
+        with col_clear:
+            if st.button("Clear History", key="clear_gen_history"):
+                st.session_state.generated_history = []
+                st.rerun()
+
+        for index, entry in enumerate(reversed(st.session_state.generated_history)):
+            entry_index = len(st.session_state.generated_history) - 1 - index
+            with st.expander(f"#{entry_index + 1} — {entry['text'][:60]}{'…' if len(entry['text']) > 60 else ''}"):
+                st.image(entry["image_bytes"], width=200)
+                st.caption(f"Content: {entry['text']}")
+                st.download_button(
+                    "Download PNG",
+                    data=entry["image_bytes"],
+                    file_name=f"qrcode_{entry_index + 1}.png",
+                    mime="image/png",
+                    key=f"download_gen_{entry_index}",
+                )
 
 with tab2:
     st.write("Upload a QR code image to decode its content.")
@@ -147,5 +181,34 @@ with tab2:
 
             if decoded_text.startswith("http://") or decoded_text.startswith("https://"):
                 st.link_button("Open Link", url=decoded_text, use_container_width=True)
+
+            if not st.session_state.decoded_history or st.session_state.decoded_history[-1]["decoded_text"] != decoded_text:
+                st.session_state.decoded_history.append({
+                    "filename": decoded_file.name,
+                    "decoded_text": decoded_text,
+                })
         else:
             st.error("❌ Could not decode the QR code. Make sure the image is clear and contains a valid QR code.")
+
+    if st.session_state.decoded_history:
+        st.divider()
+        st.subheader("🕒 Decode History")
+
+        col_clear2, _ = st.columns([1, 3])
+        with col_clear2:
+            if st.button("Clear History", key="clear_dec_history"):
+                st.session_state.decoded_history = []
+                st.rerun()
+
+        for index, entry in enumerate(reversed(st.session_state.decoded_history)):
+            entry_index = len(st.session_state.decoded_history) - 1 - index
+            with st.expander(f"#{entry_index + 1} — {entry['filename']}"):
+                st.caption(f"File: {entry['filename']}")
+                st.text_area(
+                    "Decoded Content",
+                    value=entry["decoded_text"],
+                    height=80,
+                    key=f"history_dec_{entry_index}",
+                )
+                if entry["decoded_text"].startswith("http://") or entry["decoded_text"].startswith("https://"):
+                    st.link_button("Open Link", url=entry["decoded_text"], key=f"link_dec_{entry_index}")
