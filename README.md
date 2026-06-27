@@ -1,66 +1,84 @@
-# QR Code Generator
+# QR Code Generator / Decoder
 
-A simple Streamlit app to generate custom QR codes, preview them, download as PNG, and browse your generation history.
+A Streamlit app to generate styled QR codes and decode them from uploaded images.
 
 ## Features
 
-- Generate a QR code from any text or URL
-- Customize foreground and background colors
-- Choose classic square, rounded, or circular QR modules for a more polished look
-- Adjustable box size and border
-- Download the generated QR code as a PNG
-- Session history of all codes generated, each individually downloadable
+**Generator tab**
+- Encode any text or URL into a QR code
+- Pick foreground and background colors with a color picker
+- Choose from three module styles: Classic Squares, Rounded, or Circles
+- Four size presets: Small, Medium, Large, HD
+- Optionally embed a logo image at the center
+- Download the result as a PNG
+- Session history of every code generated, each with its own download button
+
+**Decoder tab**
+- Upload a QR code image (PNG or JPG) to extract its content
+- Detects and decodes using OpenCV's built-in QR detector
+- If the decoded text is a URL, a one-click "Open Link" button appears
+- Session history of decoded results, deduped by content
 
 ## System Architecture
 
 ```mermaid
 flowchart TB
-    subgraph UI["User interface (Streamlit)"]
-        A[Input form<br/>text, colors, sizes]
-        B[Preview / download<br/>shows latest PNG]
-        C[History panel<br/>past codes list]
+    subgraph UI["User Interface (Streamlit)"]
+        A["Generator tab\n(text, colors, size, style, logo)"]
+        B["Decoder tab\n(image upload)"]
+        C["History panels\n(generated + decoded)"]
     end
 
-    subgraph GEN["QR generation logic"]
+    subgraph GEN["QR Generation"]
         D[qrcode: build QR matrix]
-        E[Pillow: render PNG]
+        E["Pillow: render PNG\n(StyledPilImage, color mask, logo paste)"]
     end
 
-    subgraph STATE["Session state"]
-        F[last_result]
-        G["history (list of PNGs)"]
+    subgraph DEC["QR Decoding"]
+        F[OpenCV QRCodeDetector]
     end
 
-    A --> D
-    D --> E
-    E --> F
-    E --> G
-    F --> B
-    G --> C
+    subgraph STATE["Session State"]
+        G[generated_history]
+        H[decoded_history]
+    end
+
+    A --> D --> E --> G --> C
+    B --> F --> H --> C
 ```
 
 ### Components
 
-**User interface (Streamlit)**
-- Input form: collects the text/URL to encode, foreground/background colors, box size, border size, and module style.
-- Preview / download: displays the most recently generated QR code and offers a PNG download button.
-- History panel: lists every QR code generated this session, each with its own download button.
+**User Interface (Streamlit)**
+- Generator tab: form with text input, color pickers, size/style selectors, optional logo uploader, and a submit button.
+- Decoder tab: file uploader that accepts PNG/JPG and runs detection immediately on upload.
+- History panels: expandable entries for each generated or decoded item, with download and link buttons where applicable.
 
-**QR generation logic**
-- `qrcode`: builds the QR matrix from the input text, auto-sizing to fit the data.
-- `Pillow`: renders that matrix into a PNG image using the chosen colors and module style, then encodes it to bytes.
+**QR Generation**
+- `qrcode`: builds the QR matrix from input text, auto-sizing version and using `ERROR_CORRECT_H` for logo compatibility.
+- `Pillow` + `StyledPilImage`: renders the matrix with the chosen module drawer (RoundedModuleDrawer, CircleModuleDrawer) and a `SolidFillColorMask` for custom colors. The logo is composited into the center after rendering.
 
-**Session state**
-- `last_result`: holds the most recently generated PNG bytes plus its metadata, shown in the preview section.
-- `history`: a list that accumulates every generated PNG (and its settings/timestamp) for the duration of the session.
+**QR Decoding**
+- `cv2.QRCodeDetector`: takes the uploaded image, converts it from RGB to BGR, and runs `detectAndDecode`. Falls back to an error message if detection fails.
 
-### Data flow
+**Session State**
+- `generated_history`: list of dicts, each holding the encoded text and PNG bytes.
+- `decoded_history`: list of dicts with the source filename and decoded text. Duplicate consecutive results are skipped.
 
-1. User fills in the form and submits.
-2. The text and color/size settings are passed to `qrcode`, which builds the QR matrix.
-3. `Pillow` renders that matrix into a PNG and returns raw bytes.
-4. The PNG bytes are stored in both `last_result` (for immediate preview) and prepended to `history`.
-5. Streamlit re-renders the preview and history sections from session state, including download buttons for each PNG.
+### Data Flow
+
+**Generating:**
+1. User fills the form and submits.
+2. `qrcode.QRCode` builds the matrix; the chosen module drawer renders it via `StyledPilImage`.
+3. If a logo is uploaded, it's resized to 1/5 of the QR width and pasted at the center.
+4. The final image is encoded to PNG bytes and written to `generated_history`.
+5. Streamlit re-renders the preview, download button, and history section.
+
+**Decoding:**
+1. User uploads an image.
+2. The image is converted to a NumPy array and then to BGR for OpenCV.
+3. `QRCodeDetector.detectAndDecode` returns the decoded string (or empty string on failure).
+4. The result is displayed; if it's a URL, a link button is shown. The result is appended to `decoded_history` if it differs from the last entry.
 
 ## Setup
 
@@ -74,9 +92,11 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-This opens the app in your browser, usually at `http://localhost:8501`.
+Opens at `http://localhost:8501` by default.
 
 ## Notes
 
-- History is stored in Streamlit's `session_state`, so it persists for the duration of your browser session but resets when the app restarts or the session ends. For permanent history (e.g. across restarts or multiple users), you'd want to back it with a database or file storage.
-- If foreground and background colors are too similar, the QR code may not scan reliably — the app warns you if they're identical.
+- History lives in `st.session_state` and resets when the app restarts or the browser session ends. For persistence across restarts, back it with a database or file store.
+- `ERROR_CORRECT_H` is used so the QR code stays scannable even with a logo covering part of the center.
+- If the foreground and background colors are identical, the app warns you before generating.
+- OpenCV's detector works well on clean, high-contrast images. Blurry or heavily compressed photos may fail to decode.
