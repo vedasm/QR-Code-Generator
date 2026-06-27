@@ -29,21 +29,16 @@ with tab1:
             front_color = st.color_picker("QR Color","#000000")
         with col2:
             back_color = st.color_picker("Background", "#FFFFFF")
-            qr_size = st.selectbox(
-                "QR Code Size",
-                ["Small", "Medium", "Large", "HD"],
-                index=1
-            )
-            file_format = st.selectbox(
-                "Download Format",
-                ["PNG", "JPG", "SVG"],
-                index=0
-            )
-            module_style = st.selectbox(
-                "Module Style",
-                ["Classic Squares", "Rounded", "Circles"],
-                index=0
-            )
+        qr_size = st.selectbox(
+            "QR Code Size",
+            ["Small", "Medium", "Large", "HD"],
+            index=1
+        )
+        module_style = st.selectbox(
+            "Module Style",
+            ["Classic Squares", "Rounded", "Circles"],
+            index=0
+        )
 
         logo = st.file_uploader(
             "Upload Logo (Optional)",
@@ -111,41 +106,21 @@ with tab1:
 
                 image.paste(logo_img, (x, y), logo_img)
 
-                buffer = io.BytesIO()
-                
-                if file_format == "PNG":
-                    image.save(buffer, format="PNG")
-                    mime_type = "image/png"
-                    ext = "png"
-                elif file_format == "JPG":
-                    # Ensure image is RGB for JPEG
-                    rgb_image = image.convert("RGB")
-                    rgb_image.save(buffer, format="JPEG")
-                    mime_type = "image/jpeg"
-                    ext = "jpg"
-                else: # SVG
-                    import qrcode.image.svg
-                    factory = qrcode.image.svg.SvgImage
-                    # We need to recreate the image as SVG because the 'image' variable is a PIL object
-                    svg_image = qr.make_image(image_factory=factory)
-                    buffer = io.BytesIO()
-                    svg_image.save(buffer)
-                    mime_type = "image/svg+xml"
-                    ext = "svg"
+            buffer = io.BytesIO()
+            image.save(buffer, format="PNG")
 
-                qr_image = buffer.getvalue()
+            qr_image = buffer.getvalue()
 
-                st.subheader("Generated QR Code")
-                # Always show the PIL image as the preview
-                st.image(image, width=300)
+            st.subheader("Generated QR Code")
+            st.image(qr_image, width=300)
 
-                st.download_button(
-                    f"Download {file_format}",
-                    data=qr_image,
-                    file_name=f"qrcode.{ext}",
-                    mime=mime_type,
-                    use_container_width=True,
-                )
+            st.download_button(
+                "Download PNG",
+                data=qr_image,
+                file_name="qrcode.png",
+                mime="image/png",
+                use_container_width=True,
+            )
 
 with tab2:
     st.write("Upload a QR code image to decode its content.")
@@ -173,4 +148,4 @@ with tab2:
             if decoded_text.startswith("http://") or decoded_text.startswith("https://"):
                 st.link_button("Open Link", url=decoded_text, use_container_width=True)
         else:
-            st.error("Could not decode the QR code. Make sure the image is clear and contains a valid QR code.")
+            st.error("❌ Could not decode the QR code. Make sure the image is clear and contains a valid QR code.")
