@@ -2,3 +2,4 @@ streamlit
 qrcode
 Pillow
 pyzbar
+opencv-python-headless
